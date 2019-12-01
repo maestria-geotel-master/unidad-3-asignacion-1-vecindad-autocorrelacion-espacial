@@ -1,549 +1,516 @@
 
-# Unidad 2, asignación 1: Análisis exploratorio de datos
+# Unidad 3. Vecindad y autocorrelación espacial
 
 Dentro de las opciones de `knitr`, en el encabezado de este archivo, es
 probable que encuentres el argumento `eval = F`. Antes de tejer debes
 cambiarlo a `eval = T`, para que evalúe los bloques de código según tus
 cambios.
 
-El objetivo de esta asignación es que te familiarices con técnicas
-visuales y estadísticas de análisis exploratorio de datos espaciales,
-usando como referencia la capa de provincias dominicanas y los
+El objetivo de esta asignación es que te familiarices con el análisis
+exploratorio de datos espaciales, funciones de homogeneidad espacial,
+tipos de vecindad, ponderadores y con el índice de autocorrelación
+espacial de Moran.
+
+Usarás como referencia la capa de provincias dominicanas y los
 resultados de la Encuesta Nacional de Hogares de Propósitos Múltiples de
 2017 (ENHOGAR-2017, descripción
 [aquí](https://www.one.gob.do/encuestas/enhogar), datos fuente
-[aquí](http://redatam.one.gob.do/cgibin/RpWebEngine.exe/PortalAction?&MODE=MAIN&BASE=ENH2017&MAIN=WebServerMain.inl))
-
-## Provincia asignada
-
-Toma nota del código de tu provincia asignada aleatoriamente. Los
-códigos fueron tomados desde el campo `ENLACE` de la capa
-`PROVCenso2010` del archivo `data/divisionRD.gpkg`
-
-``` r
- # abreviatura         ENLACE
- #       acade           0405
- #       agrie           0319
- #       aleir           0320
- #       arqco           0517
- #       cindy           0415
- #       franc           0707
- #       geora           0314
- #       hoyod           0616
- #       ingan           0306
- #       ingdi           0603
- #       itac9           0502
- #       ivanv           0808
- #       lbine           0930
- #       leona           0722
- #       magda           0604
- #       maryj           0118
- #       masue           0811
- #       mmvol           0426
- #       naui2           0929
- #       rober           0812
- #       wilne           0228
- #       yoenn           0610
-```
+[aquí](http://redatam.one.gob.do/cgibin/RpWebEngine.exe/PortalAction?&MODE=MAIN&BASE=ENH2017&MAIN=WebServerMain.inl)).
+Te asigno una pregunta a continuación, sobre la cual realizarás análisis
+de autocorrelación al final de la práctica.
 
 ## Pregunta asignada
 
-Toma nota de tu pregunta asignada aleatoriamente. Cada pregunta tiene
-varias posibles respuestas, todas excluyentes entre sí. Por ejemplo, la
-pregunta: `A qué cree que se debe la delincuencia en el país: ¿A la
-falta de lugares para practicar deportes?` tiene las posibles respuestas
-`Si` (número de hogares que respondieron `Sí`) y `No` (número de hogares
-que respondieron `No`). Nótese que otras preguntas tienen diferentes
-posibles respuestas; por ejemplo, `Sexo del jefe(a) del hogar` tiene
-como posibles respuestas `Hombre`, `Mujer`, `Sin información`.
-Finalmente, nótese que cada hogar sólo podía responder una de las
-alternativas.
+Toma nota de tu pregunta asignada
+aleatoriamente.
 
 ``` r
-#  [1] "acade, Grupo Socio-Económico"                                                                                                                                                            
-#  [2] "agrie, Principales problemas de su barrio o comunidad: ¿La educación?"                                                                                                                   
-#  [3] "aleir, Principales problemas de su barrio o comunidad: ¿La salud?"                                                                                                                       
-#  [4] "arqco, Principales problemas de su barrio o comunidad: ¿La acumulación de basura?"                                                                                                       
-#  [5] "cindy, Principales problemas de su barrio o comunidad: ¿La corrupción?"                                                                                                                  
-#  [6] "franc, A qué cree que se debe la delincuencia en el país: ¿A la falta de lugares para practicar deportes?"                                                                               
-#  [7] "geora, A qué cree que se debe la delincuencia en el país: ¿Otra causa?"                                                                                                                  
-#  [8] "hoyod, Principales problemas de su barrio o comunidad: ¿Otro problema?"                                                                                                                  
-#  [9] "ingan, A qué cree usted que se debe la delincuencia en su barrio o comunidad: ¿Otra causa?"                                                                                              
-# [10] "ingdi, Principales problemas de su barrio o comunidad: ¿El costo de la vida?"                                                                                                            
-# [11] "itac9, Sexo del jefe(a) del hogar"                                                                                                                                                       
-# [12] "ivanv, Principales problemas de su barrio o comunidad: ¿La delincuencia?"                                                                                                                
-# [13] "lbine, Desde noviembre del año pasado hasta la fecha, ¿Alguna de las personas de este hogar tuvo un accidente de tránsito mientra conducía un vehículo, motor o bicicleta?"              
-# [14] "leona, Principales problemas de su barrio o comunidad: ¿Calles, aceras y contenes en mal estado?"                                                                                        
-# [15] "magda, Desde noviembre del año pasado a la fecha ¿Alguna de las personas de este hogar fue atropellada por un vehículo, motor o bicicleta mientras caminaba o estaba parada en un lugar?"
-# [16] "maryj, Principales problemas de su barrio o comunidad: ¿No hay problemas en el barrio o comunidad?"                                                                                      
-# [17] "masue, A qué cree usted que se debe la delincuencia en su barrio o comunidad: ¿Educación familiar/falta de valores?"                                                                     
-# [18] "mmvol, Principales problemas de su barrio o comunidad: ¿La venta de drogas?"                                                                                                             
-# [19] "naui2, A qué cree usted que se debe la delincuencia en su barrio o comunidad: ¿A la falta de oportunidades para estudiar?"                                                               
-# [20] "rober, A qué cree usted que se debe la delincuencia en el país: ¿A la venta de drogas?"                                                                                                  
-# [21] "wilne, A qué cree que se debe la delincuencia en el país: ¿A la falta de oportunidades para estudiar?"                                                                                   
-# [22] "yoenn, A qué cree que se debe la delincuencia en el país: ¿Al consumo de drogas?"
+#  [1] "acade, Grupo Socio-Económico: Muy bajo"                                                                                                                                                            
+#  [2] "agrie, Principales problemas de su barrio o comunidad: ¿La educación?: Si"                                                                                                                   
+#  [3] "aleir, Principales problemas de su barrio o comunidad: ¿La salud?: Si"                                                                                                                       
+#  [4] "arqco, Principales problemas de su barrio o comunidad: ¿La acumulación de basura?: Si"                                                                                                       
+#  [5] "cindy, Principales problemas de su barrio o comunidad: ¿La corrupción?: Si"                                                                                                                  
+#  [6] "franc, A qué cree que se debe la delincuencia en el país: ¿A la falta de lugares para practicar deportes?: Si"                                                                               
+#  [7] "geora, A qué cree que se debe la delincuencia en el país: ¿Otra causa?: Si"                                                                                                                  
+#  [8] "hoyod, Principales problemas de su barrio o comunidad: ¿Otro problema?: Si"                                                                                                                  
+#  [9] "ingan, A qué cree usted que se debe la delincuencia en su barrio o comunidad: ¿Otra causa?: Si"                                                                                              
+# [10] "ingdi, Principales problemas de su barrio o comunidad: ¿El costo de la vida?: Si"                                                                                                            
+# [11] "itac9, Grupo Socio-Económico: Medio alto-Alto"                                                                                                                                                       
+# [12] "ivanv, Principales problemas de su barrio o comunidad: ¿La delincuencia?: Si"                                                                                                                
+# [13] "lbine, Desde noviembre del año pasado hasta la fecha, ¿Alguna de las personas de este hogar tuvo un accidente de tránsito mientra conducía un vehículo, motor o bicicleta?: Si"              
+# [14] "leona, Principales problemas de su barrio o comunidad: ¿Calles, aceras y contenes en mal estado?: Si"                                                                                        
+# [15] "magda, Desde noviembre del año pasado a la fecha ¿Alguna de las personas de este hogar fue atropellada por un vehículo, motor o bicicleta mientras caminaba o estaba parada en un lugar?: Si"
+# [16] "maryj, Principales problemas de su barrio o comunidad: ¿No hay problemas en el barrio o comunidad?: Si"                                                                                      
+# [17] "masue, A qué cree usted que se debe la delincuencia en su barrio o comunidad: ¿Educación familiar/falta de valores?: Si"                                                                     
+# [18] "mmvol, Principales problemas de su barrio o comunidad: ¿La venta de drogas?: Si"                                                                                                             
+# [19] "naui2, A qué cree usted que se debe la delincuencia en su barrio o comunidad: ¿A la falta de oportunidades para estudiar?: Si"                                                               
+# [20] "rober, A qué cree usted que se debe la delincuencia en el país: ¿A la venta de drogas?: Si"                                                                                                  
+# [21] "wilne, A qué cree que se debe la delincuencia en el país: ¿A la falta de oportunidades para estudiar?: Si"                                                                                   
+# [22] "yoenn, A qué cree que se debe la delincuencia en el país: ¿Al consumo de drogas?: Si"
 ```
 
 ## Paquetes
 
-  - Carga el paquete `sf` y la colección `tidyverse`.
+  - Carga el paquete `sf`, la colección `tidyverse` y los paquetes
+    `spdep`, `lmtest`, `tmap` y `RColorBrewer`
 
 <!-- end list -->
 
 ``` r
+library(...)
+library(...)
+library(...)
+library(...)
 library(...)
 library(...)
 ```
 
 ## Datos y unión
 
-El objetivo de esta sección es que puedas unir dos fuentes: el objeto
-espacial con los límites de las provincias, y el objeto de atributos de
-“ENHOGAR 2017”.
-
-  - Carga el conjunto de datos de “ENHOGAR 2017”, asignándolo al objeto
-    `en17`. Este conjunto de datos está guardado como archivo `.csv` en
-    la carpeta `data` (único de su tipo en la carpeta).
+  - Carga el conjunto de datos de “ENHOGAR 2017” (`.csv`), asignándolo
+    al objeto `en17`. Nota que “ENHOGAR 2017” es una encuesta y, por lo
+    tanto, recoge resultados referidos a una muestra, cuyo tamaño por
+    provincia está recogido en la columna `muestra`. Carga también la
+    capa geométrica (`.gpkg`) asignándola al objeto `prov`, y únelo a
+    `en17`. Ambas fuentes se encuentran en la carpeta `data`. Recuerda
+    el problema de la inconsistencia en el código entre ambas fuentes.
+    Verifica consistencia luego de corregir el código (usa la práctica
+    anterior como apoyo). Finalmente, une ambas fuentes, `prov` y
+    `en17`.
 
 <!-- end list -->
 
 ``` r
-... <- read.csv('...', check.names = F)
+en17 <- read.csv('...', check.names = F)
+prov <- st_read(dsn = '...', layer = '...')
+en17 <- en17 %>% mutate(...)
+match(..., ...)
+proven17 <- prov %>% inner_join(...)
 ```
 
-> El argumento `check.names = F` hace que la función `read.csv` respete
-> los espacios y caracteres especiales en los nombres de columnas.
-
-  - Carga la capa de provincias con la función `st_read`, asignándola al
-    objeto `prov`.
+  - Imprime en pantalla el `sf` resultante y genera un mapa que muestre
+    tu pregunta para todo el país.
 
 <!-- end list -->
 
 ``` r
-... <- st_read(dsn = '...', layer = '...')
+...
+proven17 %>%
+  dplyr::select(contains('...')) %>%
+  plot(breaks = 'jenks')
 ```
 
-  - Imprime los nombres de columnas de `en17` (recuerda, el nombre de un
-    objeto en R no se rodea de comillas; las comillas sólo se usan para
-    cadenas de caracteres)
+## Conversión a `sp`
+
+  - Convierte el objeto `proven17` a `SpatialPolygonsDataFrame`
+    asignándolo a `proven17.sp`, mediante la función `as_Spatial`. Este
+    paso es necesario para crear los objetos de vecindad. Verifica que
+    los nombres de columnas `proven17.sp` aparecen deformados (espacios
+    sustituidos por puntos), y corrígelos rescatando los nombres del
+    objeto original `proven17`. Usa el [material de apoyo sobre
+    vecindad](https://github.com/maestria-geotel-master/material-de-apoyo/blob/master/ref/vecindad.md)
+    para guiarte (no olvides especificar el slot `@data`).
 
 <!-- end list -->
 
 ``` r
-colnames(...)
+proven17.sp <- as_Spatial(...)
+colnames(...)[1:20]
+colnames(...) <- ... %>% st_drop_geometry() %>% colnames
 ```
 
-  - Imprime los nombres de columnas de `prov`
+  - Asigna nombres de filas al objeto `proven17.sp` a partir de la
+    columna `TOPONIMIA`.
 
 <!-- end list -->
 
 ``` r
-colnames(...)
+row.names(...) <- as.character(...)
 ```
 
-  - Las columnas a través de las cuales se pueden unir ambos conjuntos
-    son `en17$Código` y `prov$ENLACE`. Sin embargo, al igual que ocurría
-    con los datos del censo en el material de apoyo, la columna
-    `en17$Código` no conserva los ceros a la izquierda. En este caso,
-    dicha omisión ocurre en los códigos con 3 caracteres (los que tienen
-    4 caracteres están correctos). Visualiza ambas columnas para que
-    notes la discrepancia.
+## Vecindad por contigüidad
+
+  - A partir de `proven17.sp`, crea un objeto de vecindad por
+    contigüidad, asignándolo a `proven17.nb`, usando criterio `queen`.
+    Imprime en pantalla el resumen de dicho objeto de vecindad.
 
 <!-- end list -->
 
 ``` r
-en17$...
-prov$...
+... <- poly2nb(..., queen=TRUE)
+summary(...)
 ```
 
-  - Si intentaras hacer una unión, no daría resultados apropiados. Para
-    comprobarlo que dicha unión fallaría, utiliza la función `match`.
+  - Evalúa la cardinalidad, es decir, cuántos vecinos tiene cada
+    geometría/elemento (que en este caso son provincias).
 
 <!-- end list -->
 
 ``` r
-match(en17$... , prov$...)
+card(...)
 ```
 
-  - Para resolver esta discrepancia, crea una columna en el objeto
-    `en17`, mediante la cual unirás este objeto con `prov`. Es
-    preferible que las columnas con las que se realizará la unión tengan
-    el mismo nombre. El objeto `prov` ya tiene una columna `ENLACE` con
-    códigos correctos, razón por la cual crearás una columna denominada
-    `ENLACE` en `en17`, corrigiendo al mismo tiempo los ceros a la
-    izquierda faltantes. Una forma de las formas más cómodas de
-    resolverlo es con la función `mutate`, creando una columna nueva a
-    partir de la columna `Código`. Para que la nueva columna contenga
-    los ceros a la izquierda faltantes, utiliza la función de condición
-    `ifelse`. Utiliza el material de apoyo como
-referencia.
+  - Imprime en pantalla la relación de vecinos de cada geometría.
 
 <!-- end list -->
 
 ``` r
-... <- ... %>% mutate(... = ifelse(nchar(...)==3, paste0('0', ...), ...))
+sapply(..., function(x) x)
 ```
 
-  - Imprime en pantalla la columna `ENLACE` creada en `en17`, e intenta
-    ahora el `match` entre ambas columnas `ENLACE` de los dos objetos,
-    `en17` y `prov`. Si tras ejecutar el `match` no aparecen `NA`,
-    entonces la unión puede realizarse sin problemas.
+  - Haz un mapa de los vínculos de vecindad (grafo). Recuerda que
+    primero debes generar un mapa de las provincias, y luego le
+    superpondrás los vínculos. Usa el [material de apoyo sobre
+    vecindad](https://github.com/maestria-geotel-master/material-de-apoyo/blob/master/ref/vecindad.md)
+    para guiarte.
 
 <!-- end list -->
 
 ``` r
-en17$...
-match(en17$... , prov$...)
+plot(..., border="grey", lwd=0.5)
+plot(..., coordinates(...), add=T)
 ```
 
-  - Ahora haz la unión entre los conjuntos de datos `en17` y `prov`
-    mediante la función `inner_join` usando el campo `ENLACE`, el cual
-    existe en ambos objetos de manera consistente, siempre que hayas
-    ejecutado bien los códigos anteriores. Asigna el resultado al objeto
-    `proven17`, e imprímelo en pantalla.
+  - Evalúa si el objeto de vecindad es simétrico.
 
 <!-- end list -->
 
 ``` r
-... <- ... %>% inner_join(..., by = '...')
+is.symmetric.nb(...)
+```
+
+## Vecindad por número de vecinos
+
+  - A partir de `proven17.sp`, crea un objeto de vecindad por número de
+    vecinos, en el que cada geometría tenga sólo un vecino, asignándolo
+    a `proven17.nb.k1`. Imprime en pantalla el resumen de dicho objeto
+    de vecindad. Recuerda crear un objeto de coordenadas de centroides,
+    que en este ejercicio se sugiere con el nombre `coords`, y otro de
+    identidades de cada geometría, para el cual se sugiere el nombre
+    `ident`; ambos los usarás dentro de la función `knn2nb` (guíate con
+    el [material de apoyo sobre
+    vecindad](https://github.com/maestria-geotel-master/material-de-apoyo/blob/master/ref/vecindad.md)).
+    El resumen del objeto `proven17.nb.k1` debería mostrar 32 vínculos,
+    el mismo número de regiones de `proven17.sp`, dado que cada región
+    tiene un único vínculo.
+
+<!-- end list -->
+
+``` r
+coords <- coordinates(...)
+ident <- row.names(...)
+... <- knn2nb(knearneigh(..., k = ...), row.names = ident)
+summary(...)
+```
+
+  - Evalúa la cardinalidad, es decir, cuántos vecinos tiene cada
+    geometría/elemento (que en este caso son provincias). Dado que se
+    especificó anteriormente que sólo hubiese un único vecino, el vector
+    debería ser una repetición de `1`.
+
+<!-- end list -->
+
+``` r
+card(...)
+```
+
+  - Imprime en pantalla la relación de vecinos de cada geometría.
+
+<!-- end list -->
+
+``` r
+sapply(..., function(x) x)
+```
+
+  - Haz un mapa de los vínculos de vecindad (grafo). Recuerda que
+    primero debes generar un mapa de las provincias (primera corrida de
+    la función `plot`), y luego le superpondrás el mapa de los vínculos
+    (segunda corrida de `plot`, con argumento `add=T`). Usa el [material
+    de apoyo sobre
+    vecindad](https://github.com/maestria-geotel-master/material-de-apoyo/blob/master/ref/vecindad.md)
+    para guiarte. Cada provincia debería aparecer con un único vínculo.
+
+<!-- end list -->
+
+``` r
+plot(..., border="grey", lwd=0.5)
+plot(..., coordinates(...), add=T)
+```
+
+  - Evalúa si el objeto de vecindad es simétrico (no debería serlo)
+
+<!-- end list -->
+
+``` r
+is.symmetric.nb(...)
+```
+
+  - Explora las distancias entre centroides de las geometrías a partir
+    del objeto `proven17.nb.k1`. Para ello, crea un objeto denominado
+    `dist` donde almacenes las distancias a partir de aplicar la función
+    `nbdists` (recuerda que dentro de ésta debes colocar el objeto
+    `coords`). Imprime en pantalla un resumen estadístico, y genera un
+    histograma y un boxplot.
+
+<!-- end list -->
+
+``` r
+... <- unlist(nbdists(..., ...))
+summary(...)
+hist(...)
+boxplot(...)
+```
+
+  - Genera un objeto con la distancia mínima (objeto `distmin` usando la
+    función `min`) y otro con la máxima (objeto `distmax` usando la
+    función `max`). Luego, determina qué posición ocupa en el vector
+    `dist` ocupan los valores de `distmin` de `distmax`, y asígnalas a
+    los objetos `indicemin` y `indicemax`, respectivamente.
+    Posteriormente, utiliza dichas posiciones (`indicemin` y
+    `indicemax`) dentro del índice de `ident` para determinar cuál o
+    cuáles provincias se encuentran a la menor y a la mayor distancia
+    en el conjunto del país.
+
+<!-- end list -->
+
+``` r
+(distmin <- min(...)) 
+(distmax <- max(...))
+indicemin <- which(...==...)
+ident[...]
+indicemax <- which(...==...)
+ident[...]
+```
+
+  - Ordena los nombres de provincias de menor a mayor distancia de
+    separación con su vecino más próximo.
+
+<!-- end list -->
+
+``` r
+ident[order(...)]
+```
+
+## Ponderadoes espaciales
+
+  - Genera dos objetos de pesos espaciales a partir del objeto de
+    vecindad por contigüidad; uno de ellos estandarizado por filas
+    (asígnalo a `proven17.w.W`) y otro binario (asígnalo a
+    `proven17.w.B`)
+
+<!-- end list -->
+
+``` r
+... <- nb2listw(...)
+...
+... <- nb2listw(..., style = 'B')
 ...
 ```
 
-  - Genera un mapa con los resultados de tu pregunta para todo el país,
-    usando la función `plot`.
+## Autocorrelación espacial de tu variable
 
-> Un ejemplo ilustra cómo hacerlo. Supongamos el caso del estudiante
-> ficticio `hoyod`. Para extraer su pregunta, el `hoyod` utiliza el
-> operador `%>%`, la función `dplyr::select` y la función `contains`.
-> Nota que este bloque de código de ejemplo, y los siguientes del alumno
-> ficticio, están marcados como `eval=F`, para así evitar que generen
-> resultados.
+Explora la autocorrelación espacial de tu variable utilizando el *I* de
+Moran global y el local.
 
-``` r
-proven17 %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?')) %>%
-  plot(breaks = 'jenks')
-```
+  - Usando `tidyverse`, genera una columna de porcentaje de personas que
+    respondió a tu pregunta respecto del tamaño de la muestra a nivel
+    provincial (columna `muestra`). Ponle por nombre `mivariable_pct`.
+    Genera una transformada a partir de la anterior, y ponle el nombre
+    `mivariable_pct_log`. El objeto `sf` resultante asígnalo a
+    `proven17_mivar_sf`.
 
-**Tu turno**
+Para `hoyod` sería de la siguiente
+manera:
 
 ``` r
-... %>%
-  dplyr::select(contains('...')) %>%
-  plot(breaks = 'jenks')
+mivariable <- 'Principales problemas de su barrio o comunidad: ¿Otro problema?: Si'
+proven17_mivar <- proven17 %>%
+  st_centroid() %>% 
+  select(ENLACE, mivariable=contains(mivariable), muestra) %>% 
+  mutate('mivariable_pct' = mivariable/muestra*100,
+         'mivariable_pct_log' = log1p(mivariable/muestra*100),
+         x=unlist(map(geom,1)),
+         y=unlist(map(geom,2))) %>%
+  select(-muestra) %>% 
+  st_drop_geometry()
+proven17_mivar_sf <- proven17 %>%
+  inner_join(proven17_mivar, by = 'ENLACE') %>% 
+  dplyr::select(muestra, contains('mivariable'), x, y, ENLACE, TOPONIMIA)
 ```
 
-  - Genera un mapa con los resultados de tu pregunta para todo el país,
-    usando la función `geom_sf` del paquete `ggplot2`, colocando como
-    rótulos los valores de cada provincia. Genera otro mapa colocando
-    los nombres de las provincias.
-
-> El ejemplo del estudiante `hoyod` ilustra cómo hacerlo. Observa tres
-> detalles:
-
->   - La paleta utilizada es `brewer.pal` del paquete `RColorBrewer`,
->     define gradientes apropiados para la representación. Si escribe en
->     la consola `RColorBrewer::display.brewer.all()`, se desplegarán
->     todas las posibles paletas del paquete.
->   - Puedes definir el tamaño de la letra de los mapas. En el ejemplo,
->     verás que se configuran dos tipos de letra mediante `size`: 1) La
->     letra de los títulos de cada gráfico y la leyenda, en `theme(text
->     = element_text(size = X))`; 2) Los rótulos de mapa en
->     `geom_sf_text(..., size = X)`.
->   - La tabla de visulización de colores para el relleno usa escala
->     logarítmica, y la define el argumento `trans = 'log10'`. Puedes
->     “jugar” quitando dicho argumento, y notarás que los patrones se
->     esconden, o que las provincias que destacan son sólo aquellas con
->     valores extremos.
+Tu turno:
 
 ``` r
-#Rótulos: valor de la variable
-proven17 %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?')) %>%
-  gather(variable, valor, -geom) %>% 
-  ggplot() + aes(fill = valor) + geom_sf(lwd = 0.2) +
-  facet_wrap(~variable) + theme(text = element_text(size = 10)) +
-  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(9, name = 'Reds'), trans = 'log10') +
-  geom_sf_text(aes(label=valor), check_overlap = T, size = 3)
-
-#Rótulos: nombres de las provincias
-proven17 %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?'), TOPONIMIA) %>%
-  gather(variable, valor, -geom, -TOPONIMIA) %>% 
-  ggplot() + aes(fill = valor) + geom_sf(lwd = 0.2) +
-  facet_wrap(~variable) + theme(text = element_text(size = 10)) +
-  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(9, name = 'Reds'), trans = 'log10') +
-  geom_sf_text(aes(label=TOPONIMIA), check_overlap = T, size = 3)
+mivariable <- '...'
+proven17_mivar <- proven17 %>%
+  st_centroid() %>% 
+  select(ENLACE, mivariable=contains(mivariable), muestra) %>% 
+  mutate('mivariable_pct' = mivariable/muestra*100,
+         'mivariable_pct_log' = log1p(mivariable/muestra*100),
+         x=unlist(map(geom,1)),
+         y=unlist(map(geom,2))) %>%
+  select(-muestra) %>% 
+  st_drop_geometry()
+proven17_mivar_sf <- proven17 %>%
+  inner_join(proven17_mivar, by = 'ENLACE') %>% 
+  dplyr::select(muestra, contains('mivariable'), x, y, ENLACE, TOPONIMIA)
 ```
 
-**Tu turno**
+  - Haz un mapa que muestre la variable, tanto en su versión original
+    como transformada.
+
+<!-- end list -->
 
 ``` r
-#Rótulos: valor de la variable
-... %>%
-  dplyr::select(contains('...')) %>%
-  gather(variable, valor, -geom) %>% 
-  ggplot() + aes(fill = valor) + geom_sf(lwd = 0.2) +
-  facet_wrap(~variable) + theme(text = element_text(size = 10)) +
-  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(9, name = 'Reds'), trans = 'log10') +
-  geom_sf_text(aes(label=valor), check_overlap = T, size = 3)
-
-#Rótulos: nombres de las provincias
-... %>%
-  dplyr::select(contains('...'), TOPONIMIA) %>%
-  gather(variable, valor, -geom, -TOPONIMIA) %>% 
-  ggplot() + aes(fill = valor) + geom_sf(lwd = 0.2) +
-  facet_wrap(~variable) + theme(text = element_text(size = 10)) +
-  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(9, name = 'Reds'), trans = 'log10') +
-  geom_sf_text(aes(label=TOPONIMIA), check_overlap = T, size = 3)
+p1 <- tm_shape(...) +
+  tm_fill(col = "mivariable_pct", style = 'jenks',
+          palette = brewer.pal(9, name = 'Reds'), title = mivariable) +
+  tm_borders(lwd = 0.5)
+p2 <- tm_shape(...) +
+  tm_fill(col = "mivariable_pct_log", style = 'jenks',
+          palette = brewer.pal(9, name = 'Reds'), midpoint = NA, title = mivariable) +
+  tm_borders(lwd = 0.5)
+tmap_arrange(p1, p2)
 ```
 
-  - Imprime una tabla, sin columna geométrica, mostrando las respuestas
-    a tu pregunta para todo el país, incluyendo la columna `TOPONIMIA`.
+  - Comprueba el supuesto de normalidad de tu variable, tanto en su
+    versión original como transformada, mediante el gráfico cuantilar
+    normal y la prueba de *Shapiro-Wilk*.
 
-> Un ejemplo ilustra el caso del estudiante `hoyod`:
+> Tip: Como argumento de las funciones a continuación, usa la forma
+> vectorial de tu variable original y transformada;
+> e.g. proven17\_mivar\_sf$mivariable\_pct\_log
+
+> Tip: Si los puntos del gráfico cuantilar normal siguen una línea
+> recta, y la prueba de Shaprio-Wilk resulta no significativa (es decir,
+> el valor de *p* mayor que 0.05), entonces se asume como válido el
+> supuesto de normalidad.
 
 ``` r
-proven17 %>% st_drop_geometry() %>%
-  dplyr::select(TOPONIMIA, contains('Principales problemas de su barrio o comunidad: ¿Otro problema?'))
+qqnorm(...) #Versión original de la variable
+shapiro.test(...) #Versión original de la variable
+qqnorm(...) #Versión transformada de la variable (log)
+shapiro.test(...) #Versión transformada de la variable (log)
 ```
 
-**Tu turno**
+  - Interpreta el resultado de la comprobación anterior aquí:
+
+  - Comprueba el supuesto de homocedasticidad de tu variable respecto de
+    `x` e `y`, tanto en su versión original como en la transformada,
+    mediante la prueba de *Breusch-Pagan*.
+
+> Tip: Si el valor de *p* es menor que 0.05 (nivel de significancia
+> convencional, aunque arbitrario), existe evidencia para rechazar la
+> hipótesis de homocedasticidad.
 
 ``` r
-... %>% st_drop_geometry() %>%
-  dplyr::select(TOPONIMIA, contains('...'))
+... %>% lm(mivariable_pct ~ x, .) %>% bptest()
+... %>% lm(mivariable_pct ~ y, .) %>% bptest()
+... %>% lm(mivariable_pct_log ~ x, .) %>% bptest()
+... %>% lm(mivariable_pct_log ~ y, .) %>% bptest()
 ```
 
-  - Imprime una tabla, sin columna geométrica, mostrando los porcentajes
-    de cada respuesta a tu pregunta para todo el país, incluyendo la
-    columna `TOPONIMIA` y relativizando las respuestas para cada
-    provincia.
+  - Interpreta el resultado de la comprobación anterior aquí:
 
-> Un ejemplo ilustra el caso del estudiante `hoyod`. Tres operaciones
-> son clave en este proceso: 1) `gather` que reúne sólo las columnas
-> numéricas, sin la de nombres de provincias (por eso verás
-> `-TOPONIMIA`). 2) Las funciones `mutate` y `spread`, la primera genera
-> el porcentaje por provincias, y la segunda distribuye los datos por
-> columnas. 3) La función `kable`, del paquete `kableExtra`, genera una
-> tabla en formato HTML, más organizada y legible que el resultado que
-> devuelve la consola.
+En la eventualidad de que el supuesto normalidad y el de
+homocedasticidad no se cumplan, continúa con el procedimiento de estimar
+la autocorrelación la versión original o la transformada de tu variable,
+según elijas, aun cuando los resultados del análisis de autocorrelación
+espacial podrían no ser fiables.
+
+## Autocorrelación espacial global
+
+  - Comprueba primero que existe consistencia en la secuencia de los
+    nombres del objeto de vecindad y el
+*sf*.
+
+<!-- end list -->
 
 ``` r
-proven17 %>% st_drop_geometry() %>%
-  dplyr::select(TOPONIMIA, contains('Principales problemas de su barrio o comunidad: ¿Otro problema?')) %>% 
-  gather(variable, valor, -TOPONIMIA) %>% group_by(TOPONIMIA) %>%
-  mutate(pct=round(valor/sum(valor)*100,2)) %>% dplyr::select(-valor) %>%
-  spread(variable, pct) %>% kableExtra::kable()
+match(attr(proven17.w.W$neighbours, "region.id"), proven17_mivar_sf$TOPONIMIA)==1:32
 ```
 
-**Tu turno**
+  - Aplica la prueba de autocorrelación espacial global para el *I* de
+    Moran, usando los pesos estandarizados por filas como los binarios.
+
+<!-- end list -->
 
 ``` r
-... %>% st_drop_geometry() %>%
-  dplyr::select(TOPONIMIA, contains('...')) %>% 
-  gather(variable, valor, -TOPONIMIA) %>% group_by(TOPONIMIA) %>%
-  mutate(pct=round(valor/sum(valor)*100,2)) %>% dplyr::select(-valor) %>%
-  spread(variable, pct) %>% kableExtra::kable()
+(gmoranw <- moran.test(x = ..., listw = ...))
+(gmoranb <- moran.test(x = ..., listw = ...))
 ```
 
-  - Genera un mapa con los porcentajes de respuestas de tu pregunta para
-    todo el país, usando la función `geom_sf` del paquete `ggplot2`;
-    coloca como rótulos los porcentajes para cada provincia.
+  - Interpreta el resultado de la comprobación anterior aquí:
 
-> Ejemplo del estudiante `hoyod`:
+> Tip: Si el valor de *p* obtenido fue menor de 0.05, hay evidencia
+> preliminar para rechazar la hipótesis nula de “no hay autocorrelación
+> espacial”, y por lo tanto concluir que “sí hay autocorrelación
+> espacial”. En cualquier caso, es necesario que continúes evaluando la
+> autocorrelación a nivel local en el siguiente paso, con independencia
+> del resultado obtenido en la prueba global.
+
+  - Evalúa la autocorrelación espacial local. Realiza el diagrama de
+    dispersión de Moran (*Moran scatterplot*), mediante la función
+    `moran.plot`. Posteriormente, carga el script `lisaclusters.R`, y
+    ejecuta la función `lisamap` a tus datos para generar el mapa LISA.
+    En la función `lisamap`, deberás introducir los siguientes
+    argumentos: `objesp`, que es el objeto espacial denominado
+    `proven17_mivar_sf`; `pesos`, que es el objeto de pesos, que será
+    `proven17.w.W`.
+
+Para `hoyod` sería de la siguiente
+manera:
 
 ``` r
-proven17 %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?'), TOPONIMIA) %>%
-  gather(variable, valor, -geom, -TOPONIMIA) %>% 
-  group_by(TOPONIMIA) %>% 
-  mutate(pct=round(valor/sum(valor)*100,2)) %>% dplyr::select(-valor) %>% 
-  ggplot() + aes(fill = pct) + geom_sf(lwd = 0.2) +
-  facet_wrap(~variable) + theme(text = element_text(size = 10)) +
-  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(9, name = 'Reds')) +
-  geom_sf_text(aes(label=pct), check_overlap = T, size = 3)
+moran.plot(x = proven17_mivar_sf$mivariable_pct_log, listw = proven17.w.W)
+source('lisaclusters.R')
+lisamap(objesp = proven17_mivar_sf,
+        var = 'mivariable_pct_log',
+        pesos = proven17.w.W,
+        tituloleyenda = 'Significancia\n("x-y", léase\ncomo "x"\nrodeado de "y"',
+        leyenda = T,
+        anchuratitulo = 1000,
+        tamanotitulo = 16,
+        fuentedatos = 'ENHOGAR 2017',
+        titulomapa = paste0('Clusters LISA de respuestas a la pregunta:\n"', mivariable, '"'))
 ```
 
-**Tu turno**
+Tu turno:
 
 ``` r
-... %>%
-  dplyr::select(contains('...'), TOPONIMIA) %>%
-  gather(variable, valor, -geom, -TOPONIMIA) %>% 
-  group_by(TOPONIMIA) %>% 
-  mutate(pct=round(valor/sum(valor)*100,2)) %>% dplyr::select(-valor) %>% 
-  ggplot() + aes(fill = pct) + geom_sf(lwd = 0.2) +
-  facet_wrap(~variable) + theme(text = element_text(size = 10)) +
-  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(9, name = 'Reds')) +
-  geom_sf_text(aes(label=pct), check_overlap = T, size = 3)
+moran.plot(x = ..., listw = ...)
+source('lisaclusters.R')
+lisamap(objesp = ...,
+        var = '...',
+        pesos = ...,
+        tituloleyenda = 'Significancia\n("x-y", léase\ncomo "x"\nrodeado de "y"',
+        leyenda = T,
+        anchuratitulo = 1000,
+        tamanotitulo = 16,
+        fuentedatos = 'ENHOGAR 2017',
+        titulomapa = paste0('Clusters LISA de respuestas a la pregunta:\n"', mivariable, '"'))
 ```
 
-  - Repite el mandato anterior, pero usando sólo una de las posibles
-    respuestas de tu pregunta. Elige una, la que prefieras.
+  - Interpreta el resultado anterior aquí:
 
-> Un ejemplo ilustra mejor. En el caso del estudiante ficticio, las
-> respuestas de la encuesta eran ‘Sí’ y ‘No’, por lo tanto, el
-> estudiante ficticio disponde de las columnas `Principales problemas de
-> su barrio o comunidad: ¿Otro problema?: Si` y `Principales problemas
-> de su barrio o comunidad: ¿Otro problema?: No`. Elijamos la segunda
-> opción (el truco está en la función `filter`):
+> Tip: Si existe relleno rojo o azul, o ambos, significa que existe
+> autocorrelación local. El relleno rojo (*hotspots*) significa que los
+> valores altos del grupo coloreado son parecidos entre sí. Un patrón de
+> varias provincias coloreadas de rojo se atribuye a “efecto de
+> contagio” importante. Si sólo una provincia aparece en rojo,
+> significa que las provincias de su entorno tienen valores parecidos,
+> pero éstas últimas a su vez no tienen valores significativamente
+> parecidos con su entorno ulterior (no se produce “contagio”). El
+> relleno azul (*coldspots*) se interpreta de la misma manera que en el
+> caso anterior, pero con los valores en este caso son bajos. Si sólo
+> aparecen rellenos grises, significa que no hay autocorrelación local,
+> y las provincias entonces presentan un patrón aleatorio de la variable
+> analizada.
 
-``` r
-proven17 %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?'), TOPONIMIA) %>%
-  gather(variable, valor, -geom, -TOPONIMIA) %>% 
-  group_by(TOPONIMIA) %>% 
-  mutate(pct=round(valor/sum(valor)*100,2)) %>% dplyr::select(-valor) %>% 
-  filter(variable %in% 'Principales problemas de su barrio o comunidad: ¿Otro problema?: No') %>% 
-  ggplot() + aes(fill = pct) + geom_sf(lwd = 0.2) +
-  facet_wrap(~variable) + theme(text = element_text(size = 10)) +
-  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(9, name = 'Reds')) +
-  geom_sf_text(aes(label=pct), check_overlap = T, size = 3)
-```
+> A modo de verificación, los mapas LISA de todas las variables
+> asignadas se transcriben a continuación. Nota que, de las variables
+> asignadas, algunas no presentan autocorrelación espacial local.
 
-**Tu turno**
+![](lisamaps-1-12.png)
 
-``` r
-... %>%
-  dplyr::select(contains('...'), TOPONIMIA) %>%
-  gather(variable, valor, -geom, -TOPONIMIA) %>% 
-  group_by(TOPONIMIA) %>% 
-  mutate(pct=round(valor/sum(valor)*100,2)) %>% dplyr::select(-valor) %>% 
-  filter(variable %in% '...') %>% 
-  ggplot() + aes(fill = pct) + geom_sf(lwd = 0.2) +
-  facet_wrap(~variable) + theme(text = element_text(size = 10)) +
-  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(9, name = 'Reds')) +
-  geom_sf_text(aes(label=pct), check_overlap = T, size = 3)
-```
-
-  - Imprime un resumen estadístico (mínimo, primer cuartil, mediana,
-    media, tercer cuartil, máximo) de las respuestas a tu pregunta para
-    todo el país.
-
-> Un ejemplo ilustra el caso del estudiante `hoyod`:
-
-``` r
-proven17 %>% st_drop_geometry() %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?')) %>% 
-  summary
-```
-
-**Tu turno**
-
-``` r
-... %>% st_drop_geometry() %>%
-  dplyr::select(contains('...')) %>% 
-  summary
-```
-
-  - Genera un histograma para cada respuesta posible de tu pregunta:
-
-> Ejemplo de `hoyod` (la clave aquí es el `facet_grid`):
-
-``` r
-proven17 %>% st_drop_geometry() %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?')) %>%
-  select_if(is.numeric) %>% gather(variable, valor) %>%
-  ggplot + aes(x=valor) %>% geom_histogram(bins=5) +
-  facet_grid(~variable)
-```
-
-**Tu turno** (Tip: edita el argumento `bins` dentro de la función
-`geom_histogram` para adaptarlo a tus datos)
-
-``` r
-... %>% st_drop_geometry() %>%
-  dplyr::select(contains('...')) %>%
-  select_if(is.numeric) %>%  gather(variable, valor) %>%
-  ggplot + aes(x=valor) %>% geom_histogram(bins=10) +
-  scale_x_continuous(trans = 'log1p') + facet_grid(~variable)
-```
-
-  - Genera un histograma con escala logarítmica para cada respuesta
-    posible de tu pregunta:
-
-> Ejemplo de `hoyod`:
-
-``` r
-proven17 %>% st_drop_geometry() %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?')) %>%
-  select_if(is.numeric) %>% gather(variable, valor) %>%
-  ggplot + aes(x=valor) %>% geom_histogram(bins=10) +
-  scale_x_continuous(trans = 'log1p') + facet_grid(~variable)
-```
-
-**Tu turno** (Tip: edita el argumento `bins` dentro de la función
-`geom_histogram` para adaptarlo a tus datos)
-
-``` r
-... %>% st_drop_geometry() %>%
-  dplyr::select(contains('...')) %>%
-  select_if(is.numeric) %>%  gather(variable, valor) %>%
-  ggplot + aes(x=valor) %>% geom_histogram(bins=10) +
-  scale_x_continuous(trans = 'log1p') + facet_grid(~variable)
-```
-
-  - Genera un gráfico de barras en modo *dodge*, es decir, barras una al
-    lado de la otra, y barras apiladas
-
-> Ejemplo de `hoyod`:
-
-``` r
-#Barras una al lado de la otra (position = 'dodge')
-proven17 %>%
-  st_drop_geometry() %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?'), TOPONIMIA) %>%
-  gather(variable, valor, -TOPONIMIA) %>%
-  ggplot() + aes(x = TOPONIMIA, y = valor, fill = variable, group = variable) +
-  geom_col(position = 'dodge') + scale_y_continuous() +
-  theme(axis.text.x = element_text(angle = 90), text = element_text(size = 12)) + coord_flip()
-
-#Barras apiladas (position = 'fill')
-proven17 %>%
-  st_drop_geometry() %>%
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?'), TOPONIMIA) %>%
-  gather(variable, valor, -TOPONIMIA) %>%
-  ggplot() + aes(x = TOPONIMIA, y = valor, fill = variable, group = variable) +
-  geom_col(position = 'fill') + scale_y_continuous() +
-  theme(axis.text.x = element_text(angle = 90), text = element_text(size = 12)) + coord_flip()
-```
-
-**Tu turno**
-
-``` r
-#Barras una al lado de la otra (position = 'dodge')
-... %>%
-  st_drop_geometry() %>%
-  dplyr::select(contains('...'), TOPONIMIA) %>%
-  gather(variable, valor, -TOPONIMIA) %>%
-  ggplot() + aes(x = TOPONIMIA, y = valor, fill = variable, group = variable) +
-  geom_col(position = 'dodge') + scale_y_continuous() +
-  theme(axis.text.x = element_text(angle = 90), text = element_text(size = 12))  + coord_flip()
-
-#Barras apiladas (position = 'fill')
-... %>%
-  st_drop_geometry() %>%
-  dplyr::select(contains('...'), TOPONIMIA) %>%
-  gather(variable, valor, -TOPONIMIA) %>%
-  ggplot() + aes(x = TOPONIMIA, y = valor, fill = variable, group = variable) +
-  geom_col(position = 'fill') + scale_y_continuous() +
-  theme(axis.text.x = element_text(angle = 90), text = element_text(size = 12))  + coord_flip()
-```
-
-  - Ahora genera una tabla que muestre las respuestas a tu pregunta en
-    tu provincia asignada:
-
-> El ejemplo del alumno `hoyod` sería tal que esto:
-
-``` r
-proven17 %>% st_drop_geometry() %>% filter(ENLACE=='0616') %>% 
-  dplyr::select(contains('Principales problemas de su barrio o comunidad: ¿Otro problema?'))
-```
-
-**Tu turno**
-
-``` r
-... %>% st_drop_geometry() %>% filter(ENLACE=='...') %>% 
-  dplyr::select(contains('...'))
-```
+![](lisamaps-13-22.png)
