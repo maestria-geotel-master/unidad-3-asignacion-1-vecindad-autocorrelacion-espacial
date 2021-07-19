@@ -10,6 +10,7 @@ create_lisamap <- function(raster_file, extent_file, out_suffix, titulo_mapa) {
   library(sf)
   library(tidyverse)
   library(devtools)
+  library(psych)
   
   # Read the raster file
   r <- raster(raster_file)
